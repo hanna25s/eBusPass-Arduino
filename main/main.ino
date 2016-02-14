@@ -45,7 +45,7 @@ void loop()
 {
   bool success;
 
-  uint8_t responseLength = 32;
+  uint8_t responseLength = 48;
 
   Serial.println("Waiting for an ISO14443A card");
 
@@ -64,35 +64,26 @@ void loop()
                               0xF0, 0x01, 0x02, 0x03, 0x04, 0x05, 0x16, /* AID defined on Android App */
                               0x00  /* Le  */ };
 
-    uint8_t response[32];
+    uint8_t response[responseLength];
+    uint8_t payload[responseLength];
+    int headerSize;
 
     success = nfc.inDataExchange(selectApdu, sizeof(selectApdu), response, &responseLength);
 
     if(success) {
-
-      Serial.print("responseLength: "); Serial.println(responseLength);
-
-      nfc.PrintHexChar(response, responseLength);
-
-      do {
-        uint8_t apdu[] = "Hello from Arduino";
-        uint8_t back[32];
-        uint8_t length = 32;
-
-        success = nfc.inDataExchange(apdu, sizeof(apdu), back, &length);
-
-        if(success) {
-
-          Serial.print("responseLength: "); Serial.println(length);
-
-          nfc.PrintHexChar(back, length);
-        }
-        else {
-
-          Serial.println("Broken connection?");
-        }
+      
+      //0x30 = 0 in ASCII, which indicates an invalid pass.
+      if(response[0] == 0x30) {
+        headerSize = 1;
+      } else {
+        headerSize = 2;
       }
-      while(success);
+
+      for(int i=headerSize; i<responseLength; i++) {
+        payload[i-headerSize] = response[i];
+      }
+      
+      nfc.PrintHexChar(payload, responseLength - headerSize);
     }
     else {
 
@@ -140,3 +131,5 @@ void setupNFC() {
   // configure board to read RFID tags
   nfc.SAMConfig();
 }
+
+
