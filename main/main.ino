@@ -23,6 +23,7 @@ void setup() {
   oled.begin(&Adafruit128x64, I2C_ADDRESS);
   oled.setFont(Adafruit5x7);
   oled.clear();
+  oled.println("Initializing");
 
 
   //Init NFC Shield
@@ -48,6 +49,8 @@ void loop()
   uint8_t responseLength = 48;
 
   Serial.println("Waiting for an ISO14443A card");
+  oled.clear();
+  oled.println("Swipe Pass");
 
   // set shield to inListPassiveTarget
   success = nfc.inListPassiveTarget();
@@ -65,52 +68,64 @@ void loop()
                               0x00  /* Le  */ };
 
     uint8_t response[responseLength];
-    uint8_t payload[responseLength];
-    int headerSize;
+    String payload = "";
+    String message = "";
+    int headerSize, passType;
 
     success = nfc.inDataExchange(selectApdu, sizeof(selectApdu), response, &responseLength);
 
     if(success) {
-      
-      //0x30 = 0 in ASCII, which indicates an invalid pass.
+
+      oled.clear();
+     
+      /*
+       * Reply Format = XYZZZZZZZZZ...ZZZZZ
+       * X = Pass Status. 0x30 = 0, Invalid Pass. 0x31 = 1, Valid Pass
+       * Y = Pass Type. 0x30 = 0, Monthly pass. 0x31 = 1, Per Rides pass
+       * Z = Payload
+       * 
+       * If X is 0, then Y does not exist. The payload starts at byte 1 rather than 2. Byte
+       * 0 is always the pass status
+       */
       if(response[0] == 0x30) {
         headerSize = 1;
-      } else {
+        passType = -1;
+      } else if (response[0] == 0x31) {
         headerSize = 2;
+        passType = response[1];
+      } else {
+        headerSize = -1;
       }
 
-      for(int i=headerSize; i<responseLength; i++) {
-        payload[i-headerSize] = response[i];
+      if (headerSize != -1) {
+        for(int i=headerSize; i<responseLength; i++) {
+          payload += char(response[i]);
+        }
+       
+        if(passType == -1) {
+          message = payload;
+        } else if (passType == 0x30) {
+          message = "Expires On: " + payload;
+        } else if(passType == 0x31) {
+          message = payload + " rides remaining";
+        } else {
+          message = "Please try again";
+        }
+
+        Serial.print("Message: "); Serial.println(message);    
+        oled.println(message);
+        delay(3000);
       }
-      
-      nfc.PrintHexChar(payload, responseLength - headerSize);
     }
     else {
-
       Serial.println("Failed sending SELECT AID");
     }
   }
   else {
-
     Serial.println("Didn't find anything!");
   }
 
   delay(1000);
-}
-
-void printResponse(uint8_t *response, uint8_t responseLength) {
-
-   String respBuffer;
-
-    for (int i = 0; i < responseLength; i++) {
-
-      if (response[i] < 0x10)
-        respBuffer = respBuffer + "0"; //Adds leading zeros if hex value is smaller than 0x10
-
-      respBuffer = respBuffer + String(response[i], HEX) + " ";
-    }
-
-    Serial.print("response: "); Serial.println(respBuffer);
 }
 
 void setupNFC() {
