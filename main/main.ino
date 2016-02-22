@@ -21,7 +21,7 @@ void setup() {
 
   //Init OLED
   oled.begin(&Adafruit128x64, I2C_ADDRESS);
-  oled.setFont(Adafruit5x7);
+  oled.setFont(TimesNewRoman16);
   oled.clear();
   oled.println("Initializing");
 
