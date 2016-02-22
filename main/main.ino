@@ -103,17 +103,18 @@ void loop()
         }
        
         if(passType == -1) {
-          message = payload;
+          oled.println(payload);
         } else if (passType == 0x30) {
-          message = "Expires On: " + payload;
+          oled.println("Expires On: ");
+          oled.println(payload);
         } else if(passType == 0x31) {
-          message = payload + " rides remaining";
+          oled.println(payload);
+          oled.println("rides remaining");
         } else {
-          message = "Please try again";
+          oled.println("Please try again");
         }
 
-        Serial.print("Message: "); Serial.println(message);    
-        oled.println(message);
+        Serial.print("Message: "); Serial.println(message); 
         delay(3000);
       }
     }
