@@ -17,6 +17,9 @@ PN532 nfc(pn532i2c);
 #define I2C_ADDRESS 0x3C
 SSD1306AsciiAvrI2c oled;
 
+#define SECURE_KEY "6Qo25p1DJkX"
+#define KEY_LENGTH sizeof(SECURE_KEY)
+
 namespace {
 
 // Set the appropriate digital I/O pin connections. These are the pin
@@ -87,54 +90,50 @@ void loop()
                               0x00  /* Le  */ };
 
     uint8_t response[responseLength];
-    String payload = "";
-    String message = "";
-    int headerSize, passType;
 
     success = nfc.inDataExchange(selectApdu, sizeof(selectApdu), response, &responseLength);
 
     if(success) {
+        /* Response Format:
+         * K[8]YZZ...ZZ
+         * K = Key for authentication. 8 bytes long
+         * Y = Pass type.
+         *      0x30 = Invalid pass
+         *      0x31 = Monthly pass
+         *      0x32 = Per ride pass
+         * Z = Payload. Size varies.
+         */
 
       oled.clear();
-     
-      /*
-       * Reply Format = XYZZZZZZZZZ...ZZZZZ
-       * X = Pass Status. 0x30 = 0, Invalid Pass. 0x31 = 1, Valid Pass
-       * Y = Pass Type. 0x30 = 0, Monthly pass. 0x31 = 1, Per Rides pass
-       * Z = Payload
-       * 
-       * If X is 0, then Y does not exist. The payload starts at byte 1 rather than 2. Byte
-       * 0 is always the pass status
-       */
-      if(response[0] == 0x30) {
-        headerSize = 1;
-        passType = -1;
-      } else if (response[0] == 0x31) {
-        headerSize = 2;
-        passType = response[1];
-      } else {
-        headerSize = -1;
+      String payload = "";
+      String key = "";
+      int passType;
+      
+      for(uint8_t i=0; i<KEY_LENGTH-1; i++) {
+        key += char(response[i]);
       }
+      
+      if(key == SECURE_KEY) {
+        passType = response[KEY_LENGTH-1];
 
-      if (headerSize != -1) {
-        for(int i=headerSize; i<responseLength; i++) {
+        for(int i=KEY_LENGTH; i<responseLength; i++) {
           payload += char(response[i]);
         }
-       
-        if(passType == -1) {
+        
+        if(passType == 0x30) {
           oled.println(payload);
-        } else if (passType == 0x30) {
+        } else if (passType == 0x31) {
           oled.println("Expires On: ");
           oled.println(payload);
-        } else if(passType == 0x31) {
+        } else if(passType == 0x32) {
           oled.println(payload);
           oled.println("rides remaining");
         } else {
           oled.println("Please try again");
         }
-
-        Serial.print("Message: "); Serial.println(message); 
         delay(3000);
+      } else {
+        oled.println("Insecure access");
       }
     }
     else {
@@ -146,24 +145,5 @@ void loop()
   }
 
   delay(1000);
-}
-
-void setupNFC() {
-
-  nfc.begin();
-
-  uint32_t versiondata = nfc.getFirmwareVersion();
-  if (! versiondata) {
-    Serial.print("Didn't find PN53x board");
-    while (1); // halt
-  }
-
-  // Got ok data, print it out!
-  Serial.print("Found chip PN5"); Serial.println((versiondata>>24) & 0xFF, HEX);
-  Serial.print("Firmware ver. "); Serial.print((versiondata>>16) & 0xFF, DEC);
-  Serial.print('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
-
-  // configure board to read RFID tags
-  nfc.SAMConfig();
 }
 
