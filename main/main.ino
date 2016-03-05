@@ -2,6 +2,8 @@
 #include <PN532Interface.h>
 #include <PN532.h>
 #include <PN532_I2C.h>
+//Clock lib
+#include <DS1302.h>
 
 //OLED Libraries
 #include "SSD1306Ascii.h"
@@ -15,10 +17,27 @@ PN532 nfc(pn532i2c);
 #define I2C_ADDRESS 0x3C
 SSD1306AsciiAvrI2c oled;
 
+namespace {
+
+// Set the appropriate digital I/O pin connections. These are the pin
+// assignments for the Arduino as well for as the DS1302 chip. See the DS1302
+// datasheet:
+//
+//   http://datasheets.maximintegrated.com/en/ds/DS1302.pdf
+const int RST   = 10;  // Chip Enable
+const int SDA= 9;  // Input/Output
+const int SCLK = 8;  // Serial Clock
+
+// Create a DS1302 object.
+DS1302 rtc(RST, SDA, SCLK);
+ Time t = rtc.time();
+}
+
 void setup() {
 
   Serial.begin(115200);
-
+  rtc.writeProtect(false);
+  rtc.halt(false);
   //Init OLED
   oled.begin(&Adafruit128x64, I2C_ADDRESS);
   oled.setFont(TimesNewRoman16);
@@ -45,7 +64,7 @@ void setup() {
 void loop()
 {
   bool success;
-
+ // printTime();
   uint8_t responseLength = 48;
 
   Serial.println("Waiting for an ISO14443A card");
@@ -147,5 +166,4 @@ void setupNFC() {
   // configure board to read RFID tags
   nfc.SAMConfig();
 }
-
 
