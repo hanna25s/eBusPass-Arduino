@@ -19,6 +19,11 @@ SSD1306AsciiAvrI2c oled;
 
 #define SECURE_KEY "6Qo25p1DJkX"
 #define KEY_LENGTH sizeof(SECURE_KEY)
+#define YEAR_END KEY_LENGTH + 3
+#define MONTH_END YEAR_END + 3
+#define DAY_END MONTH_END + 3
+
+
 
 namespace {
 
@@ -93,45 +98,64 @@ void loop()
 
     success = nfc.inDataExchange(selectApdu, sizeof(selectApdu), response, &responseLength);
 
+    String message = "";
     if(success) {
-        /* Response Format:
-         * K[8]YZZ...ZZ
-         * K = Key for authentication. 8 bytes long
-         * Y = Pass type.
-         *      0x30 = Invalid pass
-         *      0x31 = Monthly pass
-         *      0x32 = Per ride pass
-         * Z = Payload. Size varies.
-         */
+      for(int i=0; i<responseLength; i++) {
+        message += char(response[i]);
+      }
+
+      Serial.println(message);
 
       oled.clear();
-      String payload = "";
       String key = "";
-      int passType;
+      String mDay = "";
+      String mMonth = "";
+      String mYear = "";
+      String rides = "";
+      uint8_t i = 0;
       
-      for(uint8_t i=0; i<KEY_LENGTH-1; i++) {
+      for(; i<KEY_LENGTH-1; i++) {
         key += char(response[i]);
       }
       
       if(key == SECURE_KEY) {
-        passType = response[KEY_LENGTH-1];
+        for(; i<YEAR_END; i++) {
+          mYear += char(response[i]);
+        }
+        i++;
+        for(; i<MONTH_END; i++) {
+          mMonth += char(response[i]);
+        }
+        i++;
+        for(; i<DAY_END; i++) {
+          mDay += char(response[i]);
+        }
+        for(; i<responseLength; i++) {
+          rides += char(response[i]);
+        }
 
-        for(int i=KEY_LENGTH; i<responseLength; i++) {
-          payload += char(response[i]);
+        boolean isMonthlyValid = false;
+
+        if(mYear.toInt() >= t.yr) {
+          if(mMonth.toInt() >= t.mon) {
+            if(mDay.toInt() >= t.day) {
+              isMonthlyValid = true;
+            }
+          }
         }
-        
-        if(passType == 0x30) {
-          oled.println(payload);
-        } else if (passType == 0x31) {
-          oled.println("Expires On: ");
-          oled.println(payload);
-        } else if(passType == 0x32) {
-          oled.println(payload);
-          oled.println("rides remaining");
+
+        if(isMonthlyValid) {
+          oled.println("Expires on: ");
+          oled.println(mYear + "/" + mMonth + "/" + mDay);
+          delay(3000);
         } else {
-          oled.println("Please try again");
+          if(rides.toInt() > 0) {
+            oled.print(rides.toInt() - 1); oled.println(" rides remaining");
+            delay(3000);
+          } else {
+            oled.println("No Pass"); 
+          }
         }
-        delay(3000);
       } else {
         oled.println("Insecure access");
       }
