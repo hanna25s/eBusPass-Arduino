@@ -136,14 +136,14 @@ void loop()
 
         boolean isMonthlyValid = false;
 
-        if(mYear.toInt() >= t.yr) {
-          if(mMonth.toInt() >= t.mon) {
-            if(mDay.toInt() >= t.day) {
-              isMonthlyValid = true;
-            }
-          }
+        if(mYear.toInt() > t.yr) {
+          isMonthlyValid = true;
+        } else if(mYear.toInt() == t.yr && 
+                  mMonth.toInt() >= t.mon &&
+                  mDay.toInt() >= t.day) {
+          isMonthlyValid = true;            
         }
-
+     
         if(isMonthlyValid) {
           oled.println("Expires on: ");
           oled.println(mYear + "/" + mMonth + "/" + mDay);
@@ -151,6 +151,12 @@ void loop()
         } else {
           if(rides.toInt() > 0) {
             oled.print(rides.toInt() - 1); oled.println(" rides remaining");
+            
+            uint8_t apdu[] = "ReduceRides";
+            uint8_t back[32];
+            uint8_t length = 32; 
+            success = nfc.inDataExchange(apdu, sizeof(apdu), back, &length);
+
             delay(3000);
           } else {
             oled.println("No Pass"); 
