@@ -73,7 +73,7 @@ void loop()
 {
   bool success;
  // printTime();
-  uint8_t responseLength = 48;
+  uint8_t responseLength = 64;
 
   Serial.println("Waiting for an ISO14443A card");
   oled.clear();
