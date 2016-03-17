@@ -36,7 +36,7 @@ DS1302 rtc(RST, SDA, SCLK);
 void setup() 
 {
 
-  Serial.begin(115200);
+  Serial.begin(250000);
   rtc.writeProtect(false);
   rtc.halt(false);
   //Init OLED
@@ -151,20 +151,25 @@ void loop()
           oled.println("Expires on: ");
           oled.println(mYear + "/" + mMonth + "/" + mDay);
           validNotification();
-          delay(3000);
         } else {
           if(rides.toInt() > 0) {
-            oled.print(rides.toInt() - 1); oled.println(" rides remaining");
-            
+
             uint8_t apdu[] = "ReduceRides";
             uint8_t back[32];
-            uint8_t length = 32; 
+            uint8_t length = 32;
             success = nfc.inDataExchange(apdu, sizeof(apdu), back, &length);
-            validNotification();
-            delay(3000);
+
+            if(!success) {
+              oled.println("Please tap and hold");
+              oled.println("for three seconds");
+              invalidNotification();
+            } else {
+              oled.print(rides.toInt() - 1); oled.println(" rides remaining");  
+              validNotification();
+            }
           } else {
-            invalidNotification();
             oled.println("No Pass"); 
+            invalidNotification();
           }
         }
       } else {
@@ -206,8 +211,8 @@ int hexToInt(char x) {
 void decrypt(char *plainText, char *cipherText, int decryptedLength)
 {
    long M = 1;
-   int n = 14351;
-   int d = 1283;
+   int n = 5183;
+   int d = 319;
    int temp = 0;
    int ctr = 0;
 
@@ -229,6 +234,7 @@ void validNotification() {
   tone(3, 600, 500);
   delay(1000);
   digitalWrite(5, LOW);
+  delay(1500);
 }
 
 void invalidNotification() {
