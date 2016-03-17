@@ -44,7 +44,9 @@ void setup()
   oled.setFont(TimesNewRoman16);
   oled.clear();
   oled.println("Initializing");
-
+  
+   pinMode(5, OUTPUT);
+   pinMode(6, OUTPUT);
 
   //Init NFC Shield
   nfc.begin();
@@ -148,6 +150,10 @@ void loop()
         if(isMonthlyValid) {
           oled.println("Expires on: ");
           oled.println(mYear + "/" + mMonth + "/" + mDay);
+           digitalWrite(5, HIGH);
+           tone(3, 600, 500);
+           delay(1000);
+           digitalWrite(5, LOW);
           delay(3000);
         } else {
           if(rides.toInt() > 0) {
