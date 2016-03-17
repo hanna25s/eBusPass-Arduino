@@ -23,15 +23,7 @@ SSD1306AsciiAvrI2c oled;
 #define MONTH_END YEAR_END + 3
 #define DAY_END MONTH_END + 3
 
-
-
 namespace {
-
-// Set the appropriate digital I/O pin connections. These are the pin
-// assignments for the Arduino as well for as the DS1302 chip. See the DS1302
-// datasheet:
-//
-//   http://datasheets.maximintegrated.com/en/ds/DS1302.pdf
 const int RST   = 10;  // Chip Enable
 const int SDA= 9;  // Input/Output
 const int SCLK = 8;  // Serial Clock
@@ -41,7 +33,8 @@ DS1302 rtc(RST, SDA, SCLK);
  Time t = rtc.time();
 }
 
-void setup() {
+void setup() 
+{
 
   Serial.begin(115200);
   rtc.writeProtect(false);
@@ -73,7 +66,7 @@ void loop()
 {
   bool success;
  // printTime();
-  uint8_t responseLength = 64;
+  uint8_t responseLength = 128;
 
   Serial.println("Waiting for an ISO14443A card");
   oled.clear();
@@ -98,13 +91,21 @@ void loop()
 
     success = nfc.inDataExchange(selectApdu, sizeof(selectApdu), response, &responseLength);
 
-    String message = "";
+    char message[responseLength];
+    int decryptedMessageLength = responseLength/4;
+    char decrypted[decryptedMessageLength];
+    
     if(success) {
-      for(int i=0; i<responseLength; i++) {
-        message += char(response[i]);
+      for(int i=0; i<=responseLength; i+=2) {
+        message[i/2] = char(hexToInt(response[i]) << 4 | hexToInt(response[i+1]));
       }
 
-      Serial.println(message);
+      decrypt(decrypted, message, sizeof(decrypted));
+
+      for(int i=0; i<sizeof(decrypted); i++) {
+        Serial.print(decrypted[i]);
+      }
+      Serial.println();
 
       oled.clear();
       String key = "";
@@ -115,23 +116,23 @@ void loop()
       uint8_t i = 0;
       
       for(; i<KEY_LENGTH-1; i++) {
-        key += char(response[i]);
+        key += char(decrypted[i]);
       }
       
       if(key == SECURE_KEY) {
         for(; i<YEAR_END; i++) {
-          mYear += char(response[i]);
+          mYear += char(decrypted[i]);
         }
         i++;
         for(; i<MONTH_END; i++) {
-          mMonth += char(response[i]);
+          mMonth += char(decrypted[i]);
         }
         i++;
         for(; i<DAY_END; i++) {
-          mDay += char(response[i]);
+          mDay += char(decrypted[i]);
         }
-        for(; i<responseLength; i++) {
-          rides += char(response[i]);
+        for(; i<decryptedMessageLength; i++) {
+          rides += char(decrypted[i]);
         }
 
         boolean isMonthlyValid = false;
@@ -177,3 +178,43 @@ void loop()
   delay(1000);
 }
 
+int hexToInt(char x) {
+
+  if(x <= '9')
+      return x - '0';
+  if(x <= 'F')
+      return x - 'A' + 10;
+  if(x <= 'f')
+      return x - 'a' + 10;
+
+  return 0;
+  
+}
+
+
+/*
+ * Originally written by: nikkotorcita
+ * https://github.com/nikkotorcita/RSA_arduino_library
+ * 
+ * Adapted slightly to work with our input from the Android phone
+ */
+void decrypt(char *plainText, char *cipherText, int decryptedLength)
+{
+   long M = 1;
+   int n = 14351;
+   int d = 1283;
+   int temp = 0;
+   int ctr = 0;
+
+   for(int i = 0; i < decryptedLength; i++) {
+       ctr = i * sizeof(int);
+       temp = (((unsigned char)cipherText[ctr + 1] << 8) | (unsigned char)cipherText[ctr]);
+       
+       for(int j = 0; j < d; j++) {
+           M = (M * temp) % n;
+       }
+
+       plainText[i] = (unsigned char)(M & 0xFF); 
+       M = 1;
+   }
+} 
