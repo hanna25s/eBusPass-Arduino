@@ -150,10 +150,7 @@ void loop()
         if(isMonthlyValid) {
           oled.println("Expires on: ");
           oled.println(mYear + "/" + mMonth + "/" + mDay);
-           digitalWrite(5, HIGH);
-           tone(3, 600, 500);
-           delay(1000);
-           digitalWrite(5, LOW);
+          validNotification();
           delay(3000);
         } else {
           if(rides.toInt() > 0) {
@@ -163,13 +160,15 @@ void loop()
             uint8_t back[32];
             uint8_t length = 32; 
             success = nfc.inDataExchange(apdu, sizeof(apdu), back, &length);
-
+            validNotification();
             delay(3000);
           } else {
+            invalidNotification();
             oled.println("No Pass"); 
           }
         }
       } else {
+        invalidNotification();
         oled.println("Insecure access");
       }
     }
@@ -224,3 +223,20 @@ void decrypt(char *plainText, char *cipherText, int decryptedLength)
        M = 1;
    }
 } 
+
+void validNotification() {
+  digitalWrite(5, HIGH);
+  tone(3, 600, 500);
+  delay(1000);
+  digitalWrite(5, LOW);
+}
+
+void invalidNotification() {
+  digitalWrite(6, HIGH);
+  tone(3, 100, 500);
+  delay(1000);
+  tone(3,100,500);
+  delay(1000);
+  digitalWrite(6, LOW);
+}
+
