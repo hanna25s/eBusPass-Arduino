@@ -39,14 +39,15 @@ void setup()
   Serial.begin(250000);
   rtc.writeProtect(false);
   rtc.halt(false);
+  
   //Init OLED
   oled.begin(&Adafruit128x64, I2C_ADDRESS);
   oled.setFont(TimesNewRoman16);
   oled.clear();
   oled.println("Initializing");
   
-   pinMode(5, OUTPUT);
-   pinMode(6, OUTPUT);
+  pinMode(5, OUTPUT);
+  pinMode(6, OUTPUT);
 
   //Init NFC Shield
   nfc.begin();
@@ -143,7 +144,7 @@ void loop()
           isMonthlyValid = true;
         } else if(mYear.toInt() == t.yr && 
                   mMonth.toInt() >= t.mon &&
-                  mDay.toInt() >= t.day) {
+                  mDay.toInt() >= t.date) {
           isMonthlyValid = true;            
         }
      
