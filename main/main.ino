@@ -68,7 +68,6 @@ void setup()
 void loop()
 {
   bool success;
- // printTime();
   uint8_t responseLength = 128;
 
   Serial.println("Waiting for an ISO14443A card");
@@ -99,6 +98,8 @@ void loop()
     char decrypted[decryptedMessageLength];
     
     if(success) {
+      t = rtc.time();
+      
       for(int i=0; i<=responseLength; i+=2) {
         message[i/2] = char(hexToInt(response[i]) << 4 | hexToInt(response[i+1]));
       }
@@ -142,10 +143,11 @@ void loop()
 
         if(mYear.toInt() > t.yr) {
           isMonthlyValid = true;
-        } else if(mYear.toInt() == t.yr && 
-                  mMonth.toInt() >= t.mon &&
-                  mDay.toInt() >= t.date) {
-          isMonthlyValid = true;            
+        } else if(mYear.toInt() ==  t.yr) {
+          if(mMonth.toInt() > t.mon || (mMonth.toInt() == t.mon &&
+                                        mDay.toInt() >= t.date)) {
+            isMonthlyValid = true;          
+          }
         }
      
         if(isMonthlyValid) {
@@ -246,4 +248,3 @@ void invalidNotification() {
   delay(1000);
   digitalWrite(6, LOW);
 }
-
