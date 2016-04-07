@@ -1,8 +1,7 @@
 /** 
  *  @file    main.ino
- *  @author  hanna25s
+ *  @author  Simon hanna
  *  @date    4/07/2016  
- *  @version 1.0 
  *  
  *  @brief ebuspass, arduino scanner 
  *
