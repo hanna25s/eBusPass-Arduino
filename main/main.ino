@@ -1,3 +1,19 @@
+/** 
+ *  @file    main.ino
+ *  @author  
+ *  @date    4/07/2016  
+ *  @version 1.0 
+ *  
+ *  @brief ebuspass, arduino scanner 
+ *
+ *  @section DESCRIPTION
+ *  
+ *  This program reads the message sent from android in a buffer 
+ *  if the program receive the message, it will decrypt the message 
+ *  and show the message up to the LCD
+ */
+
+
 //NFC Shield Libraries
 #include <PN532Interface.h>
 #include <PN532.h>
